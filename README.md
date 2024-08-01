@@ -1,27 +1,10 @@
 # Nix colorizer
 
-Flake that helps adjust colors in different color models.
+Adjust your colors or calculate new harmony colors.
 
-Representations of colors:
+Everything is calculating in the oklch model. Therefore the flake have functions that convert hex color to oklch and vice versa.
 
-1. HEX - just string like `#FFFFFF`
-2. RGB - rgb format where values are in [0; 1]
-3. RGB255 - rgb format where values are in [0; 255] and are integer
-4. HSV - hue are in [0; 360), saturation and value are in [0; 1]
-5. HSL - hue are in [0; 360), saturation and lightness are in [0; 1]
-
-You can one representation to another in this ways:
-```mermaid
-flowchart LR
-    rgb <--> hex
-    hex(HEX) <--> rgb255((RGB255))
-    rgb255 <--> rgb((RGB))
-    hsv <--> rgb
-    hsl <--> rgb
-    hsv((HSV)) <--> hsl((HSL))
-```
-
-# Usage
+## Install
 Add `nix-colorizer` to flake inputs:
 ```nix
 inputs.nix-colorizer.url = "github:nutsalhan87/nix-colorizer";
@@ -32,13 +15,13 @@ Then pass to `specialArgs` for NixOS configuration or to `extraSpecialArgs` for 
 outputs = { nixpkgs, nix-colorizer, ... }: {
     nixosConfigurations = {
         # ...
-      ass = nixpkgs.lib.nixosSystem {
+      foo = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit nix-colorizer; };
       };
     };
 
     homeConfigurations = {
-      "we@can" = home-manager.lib.homeManagerConfiguration {
+      "bar@baz" = home-manager.lib.homeManagerConfiguration {
         # ...
         extraSpecialArgs = { inherit nix-colorizer; };
       };
@@ -46,86 +29,60 @@ outputs = { nixpkgs, nix-colorizer, ... }: {
   };
 ```
 
-You will have this attribute set structure^
-```nix
-nix-colorizer = {
-    hex.to = {
-      rgb255 = ...; # String -> { r, g, b } 
-      rgb = ...; # String -> { r, g, b }
-    };
-    rgb255 = {
-      clamp = ...; # { r, g, b } -> { r, g, b }
-      to = {
-        hex = ...; # { r, g, b } -> String
-        rgb = ...; # { r, g, b } -> { r, g, b }
-      };
-      add = ...; # { r, g, b }@self, { r?, g?, b? }@adds -> { r, g, b }
-      sub = ...; # { r, g, b }@self, { r?, g?, b? }@subs -> { r, g, b }
-    };
-    rgb = {
-      clamp = ...; # { r, g, b } -> { r, g, b }
-      to = {
-        hex = ...; # { r, g, b } -> String
-        rgb255 = ...; # { r, g, b } -> { r, g, b }
-        hsv = ...; # { r, g, b } -> { h, s, v }
-        hsl = ...; # { r, g, b } -> { h, s, l }
-      };
-      add = ...; # { r, g, b }@self, { r?, g?, b? }@adds -> { r, g, b }
-      sub = ...; # { r, g, b }@self, { r?, g?, b? }@subs -> { r, g, b }
-      mul = ...; # { r, g, b }@self, { r?, g?, b? }@muls -> { r, g, b }
-      div = ...; # { r, g, b }@self, { r?, g?, b? }@divs -> { r, g, b }
-    };
-    hsv = {
-      clamp = ...; # { h, s, v } -> { h, s, v }
-      to = {
-        hsl = ...; # { h, s, v } -> { h, s, l }
-        rgb = ...; # { h, s, v } -> { r, g, b }
-      };
-      add = ...; # { h, s, v }@self, { h?, s?, v? }@adds -> { h, s, v }
-      sub = ...; # { h, s, v }@self, { h?, s?, v? }@subs -> { h, s, v }
-      mul = ...; # { h, s, v }@self, { s?, v? }@muls -> { h, s, v }
-      div = ...; # { h, s, v }@self, { s?, v? }@divs -> { h, s, v }
-    };
-    hsl = {
-      clamp = ...; # { h, s, l } -> { h, s, l }
-      to = {
-        hsv = ...; # { h, s, l } -> { h, s, v }
-        rgb = ...; # { h, s, l } -> { r, g, b }
-      };
-      add = ...; # { h, s, l }@self, { h?, s?, l? }@adds -> { h, s, l }
-      sub = ...; # { h, s, l }@self, { h?, s?, l? }@subs -> { h, s, l }
-      mul = ...; # { h, s, l }@self, { s?, l? }@muls -> { h, s, l }
-      div = ...; # { h, s, l }@self, { s?, l? }@divs -> { h, s, l }
-    };
-  };
-```
+## Functions
 
-## Some notes:
+* `hexToOklch: hex -> oklch` - Convert hex to oklch.
+  
+  _hex_ is string in format #AAAAAA.
 
-1. You can go beyond range of values while doing math operations.\
-    To every module (except `hex`) has `clamp` function to limit color values. 
-2. Clamping happening everytime you convert to hex (from rgb or rgb255).
-3. The main different between `rgb` and `rgb255` is values range: the first one has [0; 1] and the second one have [0; 255]. Accordingly, `clamp` function works differently in this modules.\
-    Another different is that `rgb255` have 4 operations but `rgb` only 2 - `add` and `sub`.
-4. In HSV and HSL you can only use `add` and `sub` operations to adjust hue unlike saturation and value/lightness where you can use any operation.
+* `oklchToHex: oklch -> hex` - Convert oklch to hex.
+  
+  _oklch_ is attrset like { L, C, h }.
 
-## Example
-Let's write function that will lighten hex color by percent value and get resulting hex string:
-```nix
-{
-  lighten = hex: percent: let
-    rgbValue = nix-colorizer.hex.to.rgb hex;
-    hslValue = nix-colorizer.rgb.to.hsl rgbValue;
-    modifier = 1 + percent / 100.0;
-    lightened = nix-colorizer.hsl.mul hslValue { l = modifier; };
-    lighenedRgbValue = nix-colorizer.hsl.to.rgb lightened;
-  in
-    nix-colorizer.rgb.to.hex lighenedRgbValue;
-};
-```
+* `oklchsToHexes: [oklch] -> [hex]` - Convert many oklch attrsets to hex strings.
 
-Demonstrating:
-```
-nix-repl> lighten "#AAAAAA" 20
-"#CCCCCC"
-```
+* `lighten: oklch, percent -> oklch` - Increase lightness of color.
+  
+  Increasing by _percent_ means that lightness just will simply be summed up, not multiplied.
+
+* `darken: oklch, percent -> oklch` - Decrease lightness of color.
+
+  Behaviour is similar to `lighten` but decreases lightness.
+
+* `gradient: oklch, oklch, steps -> [oklch]` - Calculates colors that change uniformly from the first to the second.
+
+  _steps_ means number of color between first and second. So, if you call `gradient a b 2`, as result you'll get list with 4 colors.
+
+* `shades: oklch, steps -> [oklch]` - Calculates colors that change uniformly from the passed to black.
+
+  _steps_ means the same as `gradient`.
+
+* `tints: oklch, steps -> [oklch]` - Calculates colors that change uniformly from the passed to white.
+
+  _steps_ means the same as `gradient`.
+
+* `tones: okclh, steps -> [oklch]` - Calculates colors that change uniformly from the passed to grey by decreasing its chroma.
+
+  _steps_ means the same as `gradient`.
+
+* `polygon: oklch, count -> [oklch]` - Calculates colors that evenly distrubuted on the hue wheel.
+
+  _count_ means number of colors in addition to the passed. So there will be _count + 1_ colors in the result list.
+
+  Example: `polygon a 1` will return the passed color and its complementary color, `polygon a 2` - traidic, `polygon a 3` - square.
+
+* `complementary: oklch -> oklch` - Calculates complementary color for the passed one.
+
+* `analoguos: oklch -> [oklch]` - Calculates two analogous colors for the passed one.
+
+  Returns list with two color - first is 30 degree anti-clockwise for the passed one and second - 30 degree clockwise.
+
+* `splitComplementary: oklch -> [oklch]` - Calculates split-complementary color for the passed one.
+
+  I.e. analogous colors for complementary color for the passed one.
+
+## Some notes
+
+1. Oklch is wider than sRGB. So some colors just won't fit when converting to hex. Therefore they will be just clamped to sRGB bounds - no smart converting.
+
+2. If you want change `{ L, C, h }` attrset by yourself, note that _L_ is float in [0; 1] and _h_ is in radians.
