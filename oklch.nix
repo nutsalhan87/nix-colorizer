@@ -125,4 +125,28 @@ rec {
 
   splitComplementary = { L, C, h }@lch:
     analogous (complementary lch);
+
+  hex = {
+    lighten = hex: percent: oklchToHex (lighten (hexToOklch hex) percent);
+
+    darken = hex: percent: oklchToHex (darken (hexToOklch hex) percent);
+
+    gradient =
+      hex: another: steps:
+      oklchsToHexes (gradient (hexToOklch hex) (hexToOklch another) steps);
+
+    shades = hex: steps: oklchsToHexes (shades (hexToOklch hex) steps);
+
+    tints = hex: steps: oklchsToHexes (tints (hexToOklch hex) steps);
+
+    tones = hex: steps: oklchsToHexes (tones (hexToOklch hex) steps);
+
+    polygon = hex: count: oklchsToHexes (polygon (hexToOklch hex) count);
+
+    complementary = hex: oklchToHex (complementary (hexToOklch hex));
+
+    analogous = hex: oklchsToHexes (analogous (hexToOklch hex));
+
+    splitComplementary = hex: oklchsToHexes (splitComplementary (hexToOklch hex));
+  };
 }
