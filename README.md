@@ -81,6 +81,8 @@ outputs = { nixpkgs, nix-colorizer, ... }: {
 
   I.e. analogous colors for complementary color for the passed one.
 
+There is also `hex` attribute set which implements all of color modification functions that accept hex color and return hex color. So you don't have to to write something like `oklchToHex (lighten (hexToOklch "#aaaaaa") 50)`, you can just write `hex.lighten "#aaaaaa" 50`. Note that all internal transformations are done in the oklch model. 
+
 ## Some notes
 
 1. Oklch is wider than sRGB. So some colors just won't fit when converting to hex. Therefore they will be just clamped to sRGB bounds - no smart converting.

@@ -1,11 +1,16 @@
+from dataclasses import dataclass
+from typing import Callable, Iterable
 import matplotlib.pyplot as plt
 import numpy as np
-import math
 import subprocess
 
 
-def template_single_fn(fn: str, x: [float]) -> [float]:
-    ser = "[ " + " ".join(map(lambda x: f"({np.format_float_positional(x, trim='-')})", x)) + " ]"
+def template_single_fn(fn: str, x: Iterable[float]) -> list[float]:
+    ser = (
+        "[ "
+        + " ".join(map(lambda x: f"({np.format_float_positional(x, trim='-')})", x))
+        + " ]"
+    )
     result = subprocess.run(
         [
             "nix",
@@ -22,43 +27,43 @@ def template_single_fn(fn: str, x: [float]) -> [float]:
     return list(map(float, result.stdout.split()[1:-1]))
 
 
-def sqrt(x: [float]) -> [float]:
+def sqrt(x: Iterable[float]) -> list[float]:
     return template_single_fn("sqrt", x)
 
 
-def cbrt(x: [float]) -> [float]:
+def cbrt(x: Iterable[float]) -> list[float]:
     return template_single_fn("cbrt", x)
 
 
-def sin(x: [float]) -> [float]:
+def sin(x: Iterable[float]) -> list[float]:
     return template_single_fn("sin", x)
 
 
-def cos(x: [float]) -> [float]:
+def cos(x: Iterable[float]) -> list[float]:
     return template_single_fn("cos", x)
 
 
-def arctan(x: [float]) -> [float]:
+def arctan(x: Iterable[float]) -> list[float]:
     return template_single_fn("arctan", x)
 
 
-def srgbToLinear(x: [float]) -> [float]:
+def srgbToLinear(x: Iterable[float]) -> list[float]:
     return template_single_fn("srgbToLinear", x)
 
 
-def linearToSrgb(x: [float]) -> [float]:
+def linearToSrgb(x: Iterable[float]) -> list[float]:
     return template_single_fn("linearToSrgb", x)
 
 
-def ln(x: [float]) -> [float]:
+def ln(x: Iterable[float]) -> list[float]:
     return template_single_fn("ln", x)
 
 
-def exp(x: [float]) -> [float]:
+def exp(x: Iterable[float]) -> list[float]:
     return template_single_fn("exp", x)
 
 
-def srgbToLinearPy(x: [float]) -> [float]:
+def srgbToLinearPy(x: Iterable[float]) -> list[float]:
     ret = []
     for s in x:
         if s <= 0.0404482362771082:
@@ -68,7 +73,7 @@ def srgbToLinearPy(x: [float]) -> [float]:
     return ret
 
 
-def linearToSrgbPy(x: [float]) -> [float]:
+def linearToSrgbPy(x: Iterable[float]) -> list[float]:
     ret = []
     for l in x:
         if l <= 0.00313066844250063:
@@ -80,85 +85,40 @@ def linearToSrgbPy(x: [float]) -> [float]:
 
 border = 10
 
-fig, ax = plt.subplots()
-ax.set_title("sqrt")
-x = np.linspace(0, border, 1000)
-y_nix = np.array(sqrt(x))
-y_np = np.sqrt(x)
-ax.plot(x, y_nix, 'b')
-ax.plot(x, y_np, 'r')
-print(f"sqrt max diff: {np.max(np.abs(y_nix - y_np))}")
 
-fig, ax = plt.subplots()
-ax.set_title("cbrt")
-x = np.linspace(-border, border, 1000)
-y_nix = np.array(cbrt(x))
-y_np = np.cbrt(x)
-ax.plot(x, y_nix, 'b')
-ax.plot(x, y_np, 'r')
-print(f"cbrt max diff: {np.max(np.abs(y_nix - y_np))}")
+@dataclass
+class TestCase:
+    start: float
+    stop: float
+    testing: Callable[[Iterable[float]], Iterable[float]]
+    ideal: Callable[[Iterable[float]], np.ndarray]
 
-fig, ax = plt.subplots()
-ax.set_title("sin")
-x = np.linspace(-border, border, 1000)
-y_nix = np.array(sin(x))
-y_np = np.sin(x)
-ax.plot(x, y_nix, 'b')
-ax.plot(x, y_np, 'r')
-print(f"sin max diff: {np.max(np.abs(y_nix - y_np))}")
 
-fig, ax = plt.subplots()
-ax.set_title("cos")
-x = np.linspace(-border, border, 1000)
-y_nix = np.array(cos(x))
-y_np = np.cos(x)
-ax.plot(x, y_nix, 'b')
-ax.plot(x, y_np, 'r')
-print(f"cos max diff: {np.max(np.abs(y_nix - y_np))}")
+test_cases = {
+    "sqrt": TestCase(0, border, sqrt, lambda x: np.sqrt(np.array(x))),
+    "cbrt": TestCase(-border, border, cbrt, lambda x: np.cbrt(np.array(x))),
+    "sin": TestCase(-border, border, sin, lambda x: np.sin(np.array(x))),
+    "cos": TestCase(-border, border, cos, lambda x: np.cos(np.array(x))),
+    "arctan": TestCase(-border, border, arctan, lambda x: np.arctan(np.array(x))),
+    "srgbToLinear": TestCase(0, 1, srgbToLinear, lambda x: np.array(srgbToLinearPy(x))),
+    "linearToSrgb": TestCase(0, 1, linearToSrgb, lambda x: np.array(linearToSrgbPy(x))),
+    "ln": TestCase(1e-9, border, ln, lambda x: np.log(np.array(x))),
+    "exp": TestCase(1e-9, border, exp, lambda x: np.exp(np.array(x))),
+}
 
-fig, ax = plt.subplots()
-ax.set_title("arctan")
-x = np.linspace(-border, border, 1000)
-y_nix = np.array(arctan(x))
-y_np = np.arctan(x)
-ax.plot(x, y_nix, 'b')
-ax.plot(x, y_np, 'r')
-print(f"arctan max diff: {np.max(np.abs(y_nix - y_np))}")
-
-fig, ax = plt.subplots()
-ax.set_title("srgbToLinear")
-x = np.linspace(0, 1, 1000)
-y_nix = np.array(srgbToLinear(x))
-y_np = np.array(srgbToLinearPy(x))
-ax.plot(x, y_nix, 'b')
-ax.plot(x, y_np, 'r')
-print(f"srgbToLinear max diff: {np.max(np.abs(y_nix - y_np))}")
-
-fig, ax = plt.subplots()
-ax.set_title("linearToSrgb")
-x = np.linspace(0, 1, 1000)
-y_nix = np.array(linearToSrgb(x))
-y_np = np.array(linearToSrgbPy(x))
-ax.plot(x, y_nix, 'b')
-ax.plot(x, y_np, 'r')
-print(f"linearToSrgb max diff: {np.max(np.abs(y_nix - y_np))}")
-
-fig, ax = plt.subplots()
-ax.set_title("ln")
-x = np.linspace(1e-9, border, 1000)
-y_nix = np.array(ln(x))
-y_np = np.log(x)
-ax.plot(x, y_nix, 'b')
-ax.plot(x, y_np, 'r')
-print(f"ln max diff: {np.max(np.abs(y_nix - y_np))}")
-
-fig, ax = plt.subplots()
-ax.set_title("exp")
-x = np.linspace(1e-9, border, 1000)
-y_nix = np.array(exp(x))
-y_np = np.exp(x)
-ax.plot(x, y_nix, 'b')
-ax.plot(x, y_np, 'r')
-print(f"exp max diff: {np.max(np.abs(y_nix - y_np))}")
+for name in test_cases:
+    test_case = test_cases[name]
+    fig, ax = plt.subplots()
+    ax.set_title(name)
+    x = np.linspace(test_case.start, test_case.stop, 1000)
+    y_nix = np.array(test_case.testing(x))
+    y_np = test_case.ideal(x)
+    ax.plot(x, y_nix, "b")
+    ax.plot(x, y_np, "r")
+    diff = np.abs(y_nix - y_np)
+    max_diff = np.max(diff)
+    max_index = np.argmax(diff)
+    x_at_max_diff = x[max_index]
+    print(f"{name} max diff is {max_diff} at x={x_at_max_diff}")
 
 plt.show()
