@@ -1,7 +1,7 @@
 let
   utils = import ./utils.nix;
   clampSingle = x: if x > 255 then 255 else if x < 0 then 0 else x;
-  clamp = { r, g, b, a ? 255 }@args: 
+  clamp = { r, g, b, a }@args: 
     builtins.mapAttrs (name: val: (clampSingle val)) args;
   modifiers = steps: let 
     steps' = let
@@ -23,7 +23,7 @@ rec {
       (if builtins.stringLength a == 2 then (utils.hexToDecimal a) else 255) / 255.0;
   };
 
-  rgbToOklch = { r, g, b, a ? 1.0 }@rgb: let
+  rgbToOklch = { r, g, b, a }@rgb: let
     linear = {
       r = utils.srgbToLinear rgb.r;
       g = utils.srgbToLinear rgb.g;
@@ -45,7 +45,7 @@ rec {
 
   hexToOklch = hex: rgbToOklch (hexToRgb hex);
 
-  oklchToRgb = { L, C, h, a ? 1.0 }@lch: let 
+  oklchToRgb = { L, C, h, a }@lch: let 
     a = lch.C * utils.cos lch.h;
     b = lch.C * utils.sin lch.h;
     l = utils.powInt (lch.L + 0.3963377774 * a + 0.2158037573 * b) 3;
@@ -64,7 +64,7 @@ rec {
     inherit (linear) a;
   };
 
-  rgbToHex = { r, g, b, a ? 1.0 }@rgb: let
+  rgbToHex = { r, g, b, a }@rgb: let
     clamped = clamp {
       r = utils.round (rgb.r * 255.0);
       g = utils.round (rgb.g * 255.0);
@@ -78,21 +78,21 @@ rec {
       + utils.alignedDecimalToHex clamped.b 2
       + (if clamped.a == 255 then "" else utils.alignedDecimalToHex clamped.a 2);
 
-  oklchToHex = { L, C, h, a ? 1.0 }@lch: rgbToHex (oklchToRgb lch);
+  oklchToHex = { L, C, h, a }@lch: rgbToHex (oklchToRgb lch);
 
   oklchsToHexes = oklchs: map (oklch: oklchToHex oklch) oklchs;
 
-  lighten = { L, C, h, a ? 1.0 }@lch: percent:
+  lighten = { L, C, h, a }@lch: percent:
     lch // {
       L = lch.L + (percent / 100.0);
     };
 
-  darken = { L, C, h, a ? 1.0 }@lch: percent:
+  darken = { L, C, h, a }@lch: percent:
     lch // {
       L = lch.L - (percent / 100.0);
     };
 
-  gradient = { L, C, h, a ? 1.0 }@lch: { L, C, h, a ? 1.0 }@another: steps:
+  gradient = { L, C, h, a }@lch: { L, C, h, a }@another: steps:
     map (mod: {
       L = (1 - mod) * lch.L + mod * another.L;
       C = (1 - mod) * lch.C + mod * another.C;
@@ -100,24 +100,24 @@ rec {
       a = (1 - mod) * lch.a + mod * another.a;
     }) (modifiers steps);
 
-  shades = { L, C, h, a ? 1.0 }@lch: steps:
+  shades = { L, C, h, a }@lch: steps:
     gradient lch (lch // {
       L = 0.0;
       C = 0.0;
     }) steps;
 
-  tints = { L, C, h, a ? 1.0 }@lch: steps:
+  tints = { L, C, h, a }@lch: steps:
     gradient lch (lch // {
       L = 1.0;
       C = 0.0;
     }) steps;
 
-  tones = { L, C, h, a ? 1.0 }@lch: steps:
+  tones = { L, C, h, a }@lch: steps:
     gradient lch (lch // {
       C = 0.0;
     }) steps;
 
-  polygon = { L, C, h, a ? 1.0 }@lch: count: let
+  polygon = { L, C, h, a }@lch: count: let
     count' = let
       rounded = utils.round count;
     in
@@ -128,10 +128,10 @@ rec {
       h = lch.h + shift;
     }) shifts;
 
-  complementary = { L, C, h, a ? 1.0 }@lch:
+  complementary = { L, C, h, a }@lch:
     builtins.elemAt (polygon lch 1) 1;
 
-  analogous = { L, C, h, a ? 1.0 }@lch:
+  analogous = { L, C, h, a }@lch:
     [
       (lch // {
         h = lch.h - (utils.pi / 6);
@@ -141,7 +141,7 @@ rec {
       })
     ];
 
-  splitComplementary = { L, C, h, a ? 1.0 }@lch:
+  splitComplementary = { L, C, h, a }@lch:
     analogous (complementary lch);
 
   hex = {
