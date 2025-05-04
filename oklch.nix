@@ -148,5 +148,12 @@ rec {
     analogous = hex: oklchsToHexes (analogous (hexToOklch hex));
 
     splitComplementary = hex: oklchsToHexes (splitComplementary (hexToOklch hex));
+
+    alpha =
+      hex: alpha:
+      let
+        a = utils.round ((alpha / 100.0) * 255);
+      in
+      "${builtins.substring 0 7 hex}${utils.alignedDecimalToHex a 2}";
   };
 }
