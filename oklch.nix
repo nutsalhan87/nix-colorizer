@@ -92,6 +92,15 @@ rec {
       L = lch.L - (percent / 100.0);
     };
 
+  blend = { L, C, h, a }@lch: { L, C, h, a }@another: percent: let
+    mod = percent / 100.0;
+  in {
+    L = (1 - mod) * lch.L + mod * another.L;
+    C = (1 - mod) * lch.C + mod * another.C;
+    h = (1 - mod) * lch.h + mod * another.h;
+    a = (1 - mod) * lch.a + mod * another.a;
+  };
+
   gradient = { L, C, h, a }@lch: { L, C, h, a }@another: steps:
     map (mod: {
       L = (1 - mod) * lch.L + mod * another.L;
@@ -148,6 +157,10 @@ rec {
     lighten = hex: percent: oklchToHex (lighten (hexToOklch hex) percent);
 
     darken = hex: percent: oklchToHex (darken (hexToOklch hex) percent);
+    
+    blend =
+      hex: another: percent:
+      oklchToHex (blend (hexToOklch hex) (hexToOklch another) percent);
 
     gradient =
       hex: another: steps:
