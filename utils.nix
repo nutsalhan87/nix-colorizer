@@ -23,7 +23,7 @@ let
     ceiled = builtins.ceil x; 
     floored = builtins.floor x; 
   in 
-    if (x - floored) > (ceiled - x) then ceiled else floored;
+    if (x - floored) >= (ceiled - x) then ceiled else floored;
 
   hexToDecimal = hex: let 
     hexEnum = decEnum
