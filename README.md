@@ -2,89 +2,148 @@
 
 Adjust your colors or calculate new harmony colors.
 
-Everything is calculating in the oklch model. Therefore the flake have functions that convert hex color to oklch and vice versa.
+Everything is calculated in the oklch model. Therefore the flake has functions to convert between hex, sRGB and oklch and provides useful functions for generating derived palettes.
 
 ## Install
+
 Add `nix-colorizer` to flake inputs:
+
 ```nix
 inputs.nix-colorizer.url = "github:nutsalhan87/nix-colorizer";
 ```
 
 Then pass to `specialArgs` for NixOS configuration or to `extraSpecialArgs` for Home Manager configuration:
+
 ```nix
 outputs = { nixpkgs, nix-colorizer, ... }: {
-    nixosConfigurations = {
-        # ...
-      foo = nixpkgs.lib.nixosSystem {
-        specialArgs = { inherit nix-colorizer; };
-      };
-    };
-
-    homeConfigurations = {
-      "bar@baz" = home-manager.lib.homeManagerConfiguration {
-        # ...
-        extraSpecialArgs = { inherit nix-colorizer; };
-      };
+  nixosConfigurations = {
+    foo = nixpkgs.lib.nixosSystem {
+      # ...
+      specialArgs = { inherit nix-colorizer; };
     };
   };
+
+  homeConfigurations = {
+    "bar@baz" = home-manager.lib.homeManagerConfiguration {
+      # ...
+      extraSpecialArgs = { inherit nix-colorizer; };
+    };
+  };
+};
 ```
 
-## Functions
+## Modules and functions
 
-* `hexToOklch: hex -> oklch` - Convert hex to oklch.
+Functions operate with these types:
+
+* `hex` is a string in #AABBCC or #AABBCCDD format with lowercase letters support
+
+* `srgb` is an attrset in the format `{ r, g, b, a }` where all values are in [0; 1] range
+
+* `oklch` is an attrset in the format `{ L, C, h, a }` where `L` and `a` are in [0; 1] range and h is in radians 
+
+The flake exposes a single attrset, structured by color models:
+
+```nix
+{
+  hex = { ... };
+  oklch = { ... };
+  srgb = { ... };
+}
+```
+
+All of them have `to` attrset with conversion functions:
+
+* `hex.to`
   
-  _hex_ is string in format #AAAAAA.
+  * `oklch: hex -> oklch` — convert hex to oklch
 
-* `oklchToHex: oklch -> hex` - Convert oklch to hex.
+  * `oklchs: [hex] -> [oklch]` — convert many hex strings to oklch attrsets
   
-  _oklch_ is attrset like { L, C, h }.
+  * `srgb: hex -> srgb` — convert hex to srgb
+  
+  * `srgbs: [hex] -> [srgb]` — convert many hex strings to srgb attrsets
 
-* `oklchsToHexes: [oklch] -> [hex]` - Convert many oklch attrsets to hex strings.
+* `oklch.to`
 
-* `lighten: oklch, percent -> oklch` - Increase lightness of color.
+  * `hex: oklch -> hex` — convert oklch to hex
+
+  * `hexes: [oklch] -> [hex]` — convert many oklch attrsets to hex strings 
+
+  * `srgb: oklch -> srgb` — convert oklch to srgb
+
+  * `srgbs: oklch -> srgb` — convert many oklch attrsets to srgb attrsets
+
+* `srgb.to`
+
+  * `hex: srgb -> hex` — convert srgb to hex
+
+  * `hexes: [srgb] -> [hex]` — convert many srgb attrsets to hex strings 
+
+  * `oklch: srgb -> oklch` — convert srgb to oklch
+
+  * `oklchs: [srgb] -> [oklch]` — convert many srgb attrsets to oklch attrsets
+
+**Important thing**. If alpha channel is 1.0 and you are converting color to hex, it will be converted to #AABBCC format, i.e. without alpha channel. 
+
+Modules `hex` and `oklch` provide color modification and generation functions. These functions have similar syntax between modules but you must notice an important thing: all modifications are done internally in oklch and clamped to sRGB when converting back to hex. So if you are doing a chain of color modifications, do it in oklch mode. Otherwise it is more convenient to do it in the hex mode to avoid unnecessary function calls that convert hex color to oklch and back. The functions are:
+
+* `lighten: color, percent -> color` — increase lightness of color
   
   Increasing by _percent_ means that lightness just will simply be summed up, not multiplied.
 
-* `darken: oklch, percent -> oklch` - Decrease lightness of color.
+* `darken: color, percent -> color` — decrease lightness of color
 
   Behaviour is similar to `lighten` but decreases lightness.
 
-* `gradient: oklch, oklch, steps -> [oklch]` - Calculates colors that change uniformly from the first to the second.
+* `blend: color, color, percent -> color` — calculates color that smoothly transitioned from the first one to the second one by a given percent
 
-  _steps_ means number of color between first and second. So, if you call `gradient a b 2`, as result you'll get list with 4 colors.
+* `gradient: color, color, steps -> [color]` — calculates colors that change uniformly from the first to the second
 
-* `shades: oklch, steps -> [oklch]` - Calculates colors that change uniformly from the passed to black.
+  _steps_ is the number of color between the first and the second. So, if you call `gradient a b 2`, as result you'll get list with 4 colors.
 
-  _steps_ means the same as `gradient`.
+* `shades: color, steps -> [color]` — calculates colors that change uniformly from the passed to black
 
-* `tints: oklch, steps -> [oklch]` - Calculates colors that change uniformly from the passed to white.
+* `tints: color, steps -> [color]` — calculates colors that change uniformly from the passed to white
 
-  _steps_ means the same as `gradient`.
+* `tones: color, steps -> [color]` — calculates colors that change uniformly from the passed to grey by decreasing its chroma
 
-* `tones: okclh, steps -> [oklch]` - Calculates colors that change uniformly from the passed to grey by decreasing its chroma.
-
-  _steps_ means the same as `gradient`.
-
-* `polygon: oklch, count -> [oklch]` - Calculates colors that evenly distrubuted on the hue wheel.
+* `polygon: color, count -> [color]` — calculates colors that evenly distributed on the hue wheel
 
   _count_ means number of colors in addition to the passed. So there will be _count + 1_ colors in the result list.
 
-  Example: `polygon a 1` will return the passed color and its complementary color, `polygon a 2` - traidic, `polygon a 3` - square.
+  Example: `polygon a 1` will return the passed color and its complementary color, `polygon a 2` — triadic, `polygon a 3` — square.
 
-* `complementary: oklch -> oklch` - Calculates complementary color for the passed one.
+* `complementary: color -> color` — calculates complementary color for the passed one
 
-* `analoguos: oklch -> [oklch]` - Calculates two analogous colors for the passed one.
+* `analogous: color -> [color]` — calculates two analogous colors for the passed one
 
-  Returns list with two color - first is 30 degree anti-clockwise for the passed one and second - 30 degree clockwise.
+  Returns list with two color — first is 30 degree anti-clockwise for the passed one and second — 30 degree clockwise.
 
-* `splitComplementary: oklch -> [oklch]` - Calculates split-complementary color for the passed one.
+* `splitComplementary: color -> [color]` — calculates split-complementary color for the passed one
 
   I.e. analogous colors for complementary color for the passed one.
 
-There is also `hex` attribute set which implements all of color modification functions that accept hex color and return hex color. So you don't have to to write something like `oklchToHex (lighten (hexToOklch "#aaaaaa") 50)`, you can just write `hex.lighten "#aaaaaa" 50`. Note that all internal transformations are done in the oklch model. 
+Finally, the `hex` module also includes functions for working with alpha channel:
+
+* `setAlpha: hex, alpha -> hex` — set alpha channel in the hex color
+
+  If you set it to 1.0, the alpha channel will be stripped from the output hex string. So if you want to preserve this information, just write `hexColor + "FF"`.
+
+* `stripAlpha: hex -> hex` — set alpha channel to 1.0
+
+* `incAlpha: hex, percent -> hex` — increase alpha
+
+  Increasing by _percent_ means that alpha just will simply be summed up, not multiplied.
+
+* `decAlpha: hex, percent -> hex` — decrease alpha
 
 ## Some notes
 
-1. Oklch is wider than sRGB. So some colors just won't fit when converting to hex. Therefore they will be just clamped to sRGB bounds - no smart converting.
+1. Oklch is wider than sRGB. So some colors just won't fit when converting to hex. Therefore they will be just clamped to sRGB bounds — no smart converting.
 
-2. If you want change `{ L, C, h }` attrset by yourself, note that _L_ is float in [0; 1] and _h_ is in radians.
+2. Alpha channel is preserved across conversions. However, hex format only supports 8-bit alpha, so precision may slightly degrade when converting back and forth.
+
+3. All color math (lighten, shades, polygon etc.) is performed in the oklch space for perceptual uniformity.
+
+4. There are tests available, and you can run them. Run `nix repl` and execute there `:p import ./tests.nix`. It will print a list with information about failed tests: their names and descriptions — what should be and what didn't happen. Thus, if it prints an empty list, all tests have passed.
