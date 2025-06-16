@@ -41,19 +41,18 @@ in rec {
     srgbs = oklchs: map (oklch: to.srgb oklch) oklchs;
   };
   
-  lighten = { L, C, h, a }@lch: percent:
+  lighten = { L, C, h, a }@lch: value:
     lch // {
-      L = lch.L + (percent / 100.0);
+      L = lch.L + value;
     };
 
-  darken = { L, C, h, a }@lch: percent:
+  darken = { L, C, h, a }@lch: value:
     lch // {
-      L = lch.L - (percent / 100.0);
+      L = lch.L - value;
     };
 
-  blend = { L, C, h, a }@lch: { L, C, h, a }@another: percent: let
-    mod = percent / 100.0;
-  in {
+  blend = { L, C, h, a }@lch: { L, C, h, a }@another: mod:
+  {
     L = (1 - mod) * lch.L + mod * another.L;
     C = (1 - mod) * lch.C + mod * another.C;
     h = (1 - mod) * lch.h + mod * another.h;

@@ -88,15 +88,17 @@ All of them have `to` attrset with conversion functions:
 
 Modules `hex` and `oklch` provide color modification and generation functions. These functions have similar syntax between modules but you must notice an important thing: all modifications are done internally in oklch and clamped to sRGB when converting back to hex. So if you are doing a chain of color modifications, do it in oklch mode. Otherwise it is more convenient to do it in the hex mode to avoid unnecessary function calls that convert hex color to oklch and back. The functions are:
 
-* `lighten: color, percent -> color` — increase lightness of color
-  
-  Increasing by _percent_ means that lightness just will simply be summed up, not multiplied.
+* `lighten: color, value -> color` — increase lightness of color
 
-* `darken: color, percent -> color` — decrease lightness of color
+  Increasing by _value_ means that lightness just will simply be summed up.
+
+  Example: lightening `#808080` on 0.2 is `#BDBDBD` and lightening oklch's `{ L = 0.6; ... }` on 0.2 is `{ L = 0.8; ... }`.
+
+* `darken: color, value -> color` — decrease lightness of color
 
   Behaviour is similar to `lighten` but decreases lightness.
 
-* `blend: color, color, percent -> color` — calculates color that smoothly transitioned from the first one to the second one by a given percent
+* `blend: color, color, mod -> color` — calculates color that smoothly transitioned from the first one to the second one by a given modifier
 
 * `gradient: color, color, steps -> [color]` — calculates colors that change uniformly from the first to the second
 
@@ -126,17 +128,15 @@ Modules `hex` and `oklch` provide color modification and generation functions. T
 
 Finally, the `hex` module also includes functions for working with alpha channel:
 
-* `setAlpha: hex, alpha -> hex` — set alpha channel in the hex color
+* `setAlpha: hex, value -> hex` — set alpha channel in the hex color
 
   If you set it to 1.0, the alpha channel will be stripped from the output hex string. So if you want to preserve this information, just write `hexColor + "FF"`.
 
 * `stripAlpha: hex -> hex` — set alpha channel to 1.0
 
-* `incAlpha: hex, percent -> hex` — increase alpha
+* `incAlpha: hex, value -> hex` — increase alpha
 
-  Increasing by _percent_ means that alpha just will simply be summed up, not multiplied.
-
-* `decAlpha: hex, percent -> hex` — decrease alpha
+* `decAlpha: hex, value -> hex` — decrease alpha
 
 ## Some notes
 
